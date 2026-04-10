@@ -1,7 +1,6 @@
 # Domoticz iRobot Roomba Plugin
 
-[![GitHub stars](https://img.shields.io/github/stars/ton-compte/roomba-domoticz?style=social)](https://github.com/ton-compte/roomba-domoticz)
-[![Version](https://img.shields.io/badge/version-1.2.5-blue.svg)](https://github.com/ton-compte/roomba-domoticz/releases)
+[![Version](https://img.shields.io/badge/version-1.2.5-blue.svg)](https://github.com/neutrino85/Roomba/)
 [![Domoticz](https://img.shields.io/badge/Domoticz-%E2%89%A54.0-orange.svg)](https://www.domoticz.com/)
 [![Python](https://img.shields.io/badge/Python-3.7%2B-yellow.svg)](https://www.python.org/)
 
