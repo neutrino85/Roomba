@@ -6,6 +6,8 @@
 
 **Plugin Domoticz pour contrôler localement un iRobot Roomba** via la bibliothèque `Roomba980-Python` et `asyncio`. Récupération automatique des identifiants BLID/Password via une interface web intégrée.
 
+**Compatible Roomba 600/900/i/s WiFi** ✨
+
 ## ✨ Fonctionnalités
 
 - ✅ Contrôle local complet (start, pause, dock, etc.).
@@ -106,6 +108,3 @@ Reboot  → Redémarrage Roomba
 - **Fork roomba** : [neutrino85/Roomba980-Python](https://github.com/neutrino85/Roomba980-Python)
 
 ---
-
-**Compatible Roomba 600/900/i/s WiFi** ✨
-```
