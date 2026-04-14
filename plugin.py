@@ -102,6 +102,9 @@ class BasePlugin:
         self._running = False
         self._blid    = ""
         self._password = ""
+        self._last_state = None  
+        self._last_bat = None     
+        self._last_bin = None     
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -303,19 +306,28 @@ class BasePlugin:
     async def _poll(self):
         if not self._roomba:
             return
-            
+
         ms = getattr(self._roomba, "master_state", {})
         reported = ms.get("state", {}).get("reported", {})
-    
-        state   = str(getattr(self._roomba, "current_state", "Inconnu"))
-        bat_raw = getattr(self._roomba, "batPct", 0)
-        bat     = int(bat_raw) if bat_raw is not None else 0
+
+        state = str(getattr(self._roomba, "current_state", "Inconnu"))
+        bat   = int(reported.get("batPct", 0) or 0)
         bin_f = reported.get("bin", {}).get("full", False)
 
-        Devices[UNIT_STATE].Update(nValue=0, sValue=state)
-        Devices[UNIT_BAT].Update(nValue=bat, sValue=str(bat))
-        Devices[UNIT_BIN].Update(nValue=1 if bin_f else 0, sValue="")
-        Domoticz.Log("bin_full={}  state={}  bat={}%".format(bin_f, state, bat))
+        if state != self._last_state:
+            Devices[UNIT_STATE].Update(nValue=0, sValue=state)
+            self._last_state = state
+            Domoticz.Log("state → " + state)
+
+        if bat != self._last_bat:
+            Devices[UNIT_BAT].Update(nValue=bat, sValue=str(bat))
+            self._last_bat = bat
+            Domoticz.Log("bat → {}%".format(bat))
+
+        if bin_f != self._last_bin:
+            Devices[UNIT_BIN].Update(nValue=1 if bin_f else 0, sValue="")
+            self._last_bin = bin_f
+            Domoticz.Log("bin_full → " + str(bin_f))
         
     async def _command(self, cmd):
         if not self._roomba:
