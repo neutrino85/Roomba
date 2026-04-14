@@ -303,16 +303,20 @@ class BasePlugin:
     async def _poll(self):
         if not self._roomba:
             return
+            
+        ms = getattr(self._roomba, "master_state", {})
+        reported = ms.get("state", {}).get("reported", {})
+    
         state   = str(getattr(self._roomba, "current_state", "Inconnu"))
         bat_raw = getattr(self._roomba, "batPct", 0)
         bat     = int(bat_raw) if bat_raw is not None else 0
-        bin_raw = getattr(self._roomba, "bin_full", False)
-        bin_f   = bool(bin_raw) if bin_raw is not None else False
+        bin_f = reported.get("bin", {}).get("full", False)
 
         Devices[UNIT_STATE].Update(nValue=0, sValue=state)
         Devices[UNIT_BAT].Update(nValue=bat, sValue=str(bat))
         Devices[UNIT_BIN].Update(nValue=1 if bin_f else 0, sValue="")
-
+        Domoticz.Log("bin_full={}  state={}  bat={}%".format(bin_f, state, bat))
+        
     async def _command(self, cmd):
         if not self._roomba:
             return
