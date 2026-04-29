@@ -4,13 +4,23 @@
     <description>
         Contrôle iRobot Roomba via la bibliothèque Roomba980-Python.
         Récupération des identifiants pour se connecter au robot : http://IPdomoticz:8788 (par défaut)
+        Control the iRobot Roomba via the Roomba980-Python library.
+        Retrieve the credentials to connect to the robot: http://IPdomoticz:8788 (by default)
     </description>
     <params>
         <param field="Address"  label="IP Roomba"            width="150px" required="true"  default=""/>
         <param field="Username" label="BLID (optionnel)"     width="200px" required="false" default=""/>
         <param field="Password" label="Password (optionnel)" width="200px" required="false" default="" password="true"/>
+        
         <param field="Mode1"    label="Port UI Enrollment"   width="80px"  required="true"  default="8788"/>
         <param field="Mode2"    label="Heartbeat (s)"        width="80px"  required="true"  default="30"/>
+        <param field="Mode3"    label="Langue"               width="120px" required="true"  default="fr">
+            <options>
+                <option label="Français" value="fr" default="true"/>
+                <option label="English" value="en"/>
+            </options>
+        </param>
+
         <param field="Mode6"    label="Debug" width="75px">
             <options>
                 <option label="Aucun"   value="0" default="true"/>
@@ -35,6 +45,7 @@ if _PLUGIN_DIR not in sys.path:
     sys.path.insert(0, _PLUGIN_DIR)
 
 import Domoticz
+from i18n import _, set_language
 from lib_manager import ensure_all, is_roomba_available, is_paho_available
 from enrollment_server import EnrollmentServer
 
@@ -45,15 +56,21 @@ UNIT_BIN   = 3
 UNIT_CMD   = 4
 
 # Niveau 0 = "En charge" pour coller au script dzVents LUA
-CMD_LEVELS = {
-    0:  "En charge",
-    10: "Start",
-    20: "Pause",
-    30: "Resume",
-    40: "Dock",
-    50: "Stop",
-    60: "Reboot"
+
+# Niveaux de commandes
+CMD_KEYS = {
+    0:  "cmd_charging",
+    10: "cmd_start",
+    20: "cmd_pause",
+    30: "cmd_resume",
+    40: "cmd_dock",
+    50: "cmd_stop",
+    60: "cmd_reboot"
 }
+
+def get_cmd_levels():
+    return {k: _(v) for k, v in CMD_KEYS.items()}
+
 CMD_MAP = {
     0:  "charge",
     10: "start",
@@ -90,7 +107,7 @@ def _load_credentials():
 def _delete_credentials():
     if os.path.isfile(_CRED_FILE):
         os.remove(_CRED_FILE)
-        Domoticz.Log("credentials.json supprimé.")
+        Domoticz.Log(_("cred_deleted"))
 
 
 class BasePlugin:
@@ -109,6 +126,10 @@ class BasePlugin:
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     def onStart(self):
+        # Initialize Language based on Mode3 if available
+        lang = Parameters.get("Mode3", "fr") if "Parameters" in globals() else "fr"
+        set_language(lang)
+
         debug = int(Parameters["Mode6"])
         if debug > 0:
             Domoticz.Debugging(debug)
@@ -132,22 +153,22 @@ class BasePlugin:
         paho_ok = is_paho_available()
 
         if not lib_ok or not paho_ok:
-            Domoticz.Log("Bibliothèque manquante — installation automatique…")
+            Domoticz.Log(_("lib_missing"))
             ok, messages = ensure_all(progress_cb=Domoticz.Log)
             for status, msg in messages:
                 (Domoticz.Log if status == "ok" else Domoticz.Error)(msg)
             lib_ok  = is_roomba_available()
             paho_ok = is_paho_available()
             if not lib_ok:
-                Domoticz.Error("Installation échouée. Utilisez la page d'enrôlement.")
+                Domoticz.Error(_("enroll_failed"))
         else:
-            Domoticz.Log("Bibliothèque roomba disponible.")
+            Domoticz.Log(_("lib_available"))
 
         creds = _load_credentials()
         if creds:
             self._blid     = creds["blid"]
             self._password = creds["password"]
-            Domoticz.Log("Credentials chargés depuis credentials.json")
+            Domoticz.Log(_("cred_loaded"))
         else:
             self._blid     = Parameters["Username"].strip()
             self._password = Parameters["Password"].strip()
@@ -167,20 +188,20 @@ class BasePlugin:
             paho_ok=paho_ok,
         )
         self._enroll.start()
-        Domoticz.Log("Page d'enrôlement : http://<IPdomoticz>:" + str(port) + "/")
+        Domoticz.Log(_("enroll_page", port=port))
 
         if lib_ok and self._blid and self._password and Parameters["Address"].strip():
             self._startWorker()
         elif not lib_ok:
-            Domoticz.Log("En attente de la bibliothèque roomba.")
+            Domoticz.Log(_("waiting_lib"))
         else:
-            Domoticz.Log("En attente des credentials.")
+            Domoticz.Log(_("waiting_credentials"))
 
     def onStop(self):
         if self._enroll:
             self._enroll.stop()   # bloque ~1s max, libère EnrollHTTP proprement
         self._stopWorker()
-        Domoticz.Log("Plugin Roomba arrêté.")
+        Domoticz.Log(_("plugin_stopped"))
 
     def onHeartbeat(self):
         if self._running:
@@ -300,7 +321,7 @@ class BasePlugin:
         self._roomba = Roomba(Parameters["Address"].strip(), self._blid, self._password)
         self._roomba.connect()
         await asyncio.sleep(5)
-        Domoticz.Log("Roomba connecté.")
+        Domoticz.Log(_("roomba_connected"))
         await self._poll()
 
     async def _poll(self):
@@ -319,10 +340,10 @@ class BasePlugin:
             self._last_state = state
             Domoticz.Log("state → " + state)
 
-        if bat != self._last_bat:
-            Devices[UNIT_BAT].Update(nValue=bat, sValue=str(bat))
-            self._last_bat = bat
-            Domoticz.Log("bat → {}%".format(bat))
+        #if bat != self._last_bat:
+        Devices[UNIT_BAT].Update(nValue=bat, sValue=str(bat))
+        self._last_bat = bat
+        Domoticz.Log("bat → {}%".format(bat))
 
         if bin_f != self._last_bin:
             Devices[UNIT_BIN].Update(nValue=1 if bin_f else 0, sValue="")
@@ -348,23 +369,23 @@ class BasePlugin:
     def _createDevices(self):
         icon = self._icon_id()
         opts = {
-            "LevelActions": "|" * (len(CMD_LEVELS) - 1),
-            "LevelNames": "|".join(CMD_LEVELS.values()),
+            "LevelActions": "|" * (len(CMD_KEYS) - 1),
+            "LevelNames": "|".join(get_cmd_levels().values()),
             "LevelOffHidden": "true",
             "SelectorStyle": "0"
             # Suppression de "Image": icon ici
         }
 
         if UNIT_STATE not in Devices:
-            Domoticz.Device(Name="État", Unit=UNIT_STATE, TypeName="Text", Image=icon, Used=1).Create()
+            Domoticz.Device(Name=_("device_state"), Unit=UNIT_STATE, TypeName="Text", Image=icon, Used=1).Create()
         if UNIT_BAT not in Devices:
-            Domoticz.Device(Name="Batterie", Unit=UNIT_BAT, TypeName="Custom",
+            Domoticz.Device(Name=_("device_battery"), Unit=UNIT_BAT, TypeName="Custom",
                             Options={"Custom": "1;%"}, Image=icon, Used=1).Create()
         if UNIT_BIN not in Devices:
-            Domoticz.Device(Name="Bac plein", Unit=UNIT_BIN, TypeName="Switch", Image=icon, Used=1).Create()
+            Domoticz.Device(Name=_("device_bin"), Unit=UNIT_BIN, TypeName="Switch", Image=icon, Used=1).Create()
             
         if UNIT_CMD not in Devices:
-            Domoticz.Device(Name="Commandes", Unit=UNIT_CMD,
+            Domoticz.Device(Name=_("device_commands"), Unit=UNIT_CMD,
                             TypeName="Selector Switch", Options=opts, Image=icon, Used=1).Create()
         else:
             Devices[UNIT_CMD].Update(

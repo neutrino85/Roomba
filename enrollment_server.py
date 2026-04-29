@@ -4,6 +4,7 @@ enrollment_server.py — Serveur HTTP léger pour l'enrôlement du Roomba.
 
 import ipaddress
 import json
+from i18n import _, set_language
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs
@@ -59,18 +60,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <body>
     <div class="container">
         <div class="card">
-            <h1>Configuration iRobot Roomba</h1>
-            <p>Plugin Domoticz</p>
+            <h1>{t_ui_title}</h1>
+            <p>{t_ui_subtitle}</p>
 
             <div id="alert" class="alert hidden"></div>
 
             <div class="lib-status">
                 <div class="status-item">
-                    <span>Bibliothèque Roomba980-Python</span>
+                    <span>{t_ui_lib_roomba}</span>
                     <span class="badge {lib_cls}">{lib_txt}</span>
                 </div>
                 <div class="status-item">
-                    <span>Dépendance paho-mqtt</span>
+                    <span>{t_ui_lib_paho}</span>
                     <span class="badge {paho_cls}">{paho_txt}</span>
                 </div>
                 {install_btn}
@@ -80,32 +81,32 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             <div id="enroll-section" class="{enroll_hidden}">
                 <div class="alert alert-warning">
-                    <strong>Étape 1 :</strong> Assurez-vous que le Roomba est sur sa base.<br>
-                    <strong>Étape 2 :</strong> Maintenez le bouton <b>HOME</b> enfoncé entre 2 et 20 secondes (jusqu'au bip).<br>
-                    <strong>Étape 3 :</strong> Cliquez sur "Récupérer les identifiants" ci-dessous dans les 5 minutes.
+                    <strong>{t_ui_step1}</strong> {t_ui_step1_txt}<br>
+                    <strong>{t_ui_step2}</strong> {t_ui_step2_txt}<br>
+                    <strong>{t_ui_step3}</strong> {t_ui_step3_txt}
                 </div>
 
                 <div class="form-group">
-                    <label>IP du Roomba (définie dans Domoticz)</label>
+                    <label>{t_ui_ip_label}</label>
                     <input type="text" id="ip" value="{current_ip}" readonly>
                 </div>
 
                 <button id="btn-enroll" onclick="startEnrollment()">
-                    Récupérer les identifiants (BLID / Password)
+                    {t_ui_btn_enroll}
                     <div class="loader"></div>
                 </button>
             </div>
 
             <div id="success-section" class="{ok_hidden}">
                 <div class="alert alert-success">
-                    <strong>Credentials enregistrés !</strong><br>
-                    Le plugin est configuré et le fichier <code>credentials.json</code> a été créé.
+                    <strong>{t_ui_cred_saved}</strong><br>
+                    {t_ui_cred_saved_txt}
                 </div>
                 <div class="form-group">
                     <label>BLID</label>
                     <input type="text" value="{blid}" readonly>
                 </div>
-                <button class="danger" onclick="resetCredentials()">Réinitialiser la configuration</button>
+                <button class="danger" onclick="resetCredentials()">{t_ui_btn_reset}</button>
             </div>
         </div>
     </div>
@@ -117,7 +118,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const ip = document.getElementById('ip').value;
             
             if (!ip) {{
-                showAlert("Veuillez d'abord configurer l\\'IP du Roomba dans le matériel Domoticz.", 'error');
+                showAlert("{t_ui_err_ip_missing}", 'error');
                 return;
             }}
 
@@ -139,7 +140,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     showAlert(data.message, 'error');
                 }}
             }} catch (e) {{
-                showAlert('Erreur réseau.', 'error');
+                showAlert('{t_ui_err_network}', 'error');
             }} finally {{
                 btn.classList.remove('loading');
                 btn.disabled = false;
@@ -155,14 +156,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 await fetch('/api/install', {{ method: 'POST' }});
                 window.location.reload();
             }} catch (e) {{
-                showAlert("Erreur réseau pendant l\\'installation.", 'error');
+                showAlert("{t_ui_err_network_install}", 'error');
                 btn.classList.remove('loading');
                 btn.disabled = false;
             }}
         }}
 
         async function resetCredentials() {{
-            if (!confirm('Effacer les identifiants ? Le plugin devra être reconfiguré.')) return;
+            if (!confirm('{t_ui_confirm_reset}')) return;
             await fetch('/api/reset', {{ method: 'POST' }});
             window.location.reload();
         }}
@@ -206,20 +207,54 @@ class _Handler(BaseHTTPRequestHandler):
             "<pre>" + "\n".join(log) + "</pre>"
         ) if log and not lib_ready else ""
         install_btn = (
-            '<button onclick="install()">Installer les dépendances</button>'
+            '<button onclick="install()">{t_ui_btn_install_lib}</button>'
         ) if not lib_ready else ""
+
+# Prepare UI translations
+        t_ui = {
+            't_ui_title': _('ui_title'),
+            't_ui_subtitle': _('ui_subtitle'),
+            't_ui_lib_roomba': _('ui_lib_roomba'),
+            't_ui_lib_paho': _('ui_lib_paho'),
+            't_ui_step1': _('ui_step1'),
+            't_ui_step1_txt': _('ui_step1_txt'),
+            't_ui_step2': _('ui_step2'),
+            't_ui_step2_txt': _('ui_step2_txt'),
+            't_ui_step3': _('ui_step3'),
+            't_ui_step3_txt': _('ui_step3_txt'),
+            't_ui_ip_label': _('ui_ip_label'),
+            't_ui_btn_enroll': _('ui_btn_enroll'),
+            't_ui_success_title': _('ui_success_title'),
+            't_ui_success_subtitle': _('ui_success_subtitle'),
+            't_ui_btn_close': _('ui_btn_close'),
+            't_ui_btn_delete': _('ui_btn_delete'),
+            't_ui_btn_install_lib': _('ui_btn_install_lib'),
+            't_ui_log_title': _('ui_log_title'),
+            't_ui_msg_fetching': _('ui_msg_fetching'),
+            't_ui_msg_error': _('ui_msg_error'),
+            't_ui_msg_delete_ok': _('ui_msg_delete_ok'),
+            't_ui_msg_installing': _('ui_msg_installing'),
+            't_ui_cred_saved': _('ui_cred_saved'),
+            't_ui_cred_saved_txt': _('ui_cred_saved_txt'),
+            't_ui_btn_reset': _('ui_btn_reset'),
+            't_ui_err_ip_missing': _('ui_err_ip_missing').replace("'", "\\'"), # Escaping for JS
+            't_ui_err_network': _('ui_err_network').replace("'", "\\'"),
+            't_ui_err_network_install': _('ui_err_network_install').replace("'", "\\'"),
+            't_ui_confirm_reset': _('ui_confirm_reset').replace("'", "\\'")
+        }
 
         html = HTML_TEMPLATE.format(
             current_ip    = st.get("current_ip", ""),
             blid          = st.get("blid", ""),
             lib_cls       = "ok"  if lib_ok    else "err",
-            lib_txt       = "Installée" if lib_ok    else "Manquante",
+            lib_txt       = _("ui_status_ok") if lib_ok    else _("ui_status_err"),
             paho_cls      = "ok"  if paho_ok   else "err",
-            paho_txt      = "Installée" if paho_ok   else "Manquante",
+            paho_txt      = _("ui_status_ok") if paho_ok   else _("ui_status_err"),
             enroll_hidden = "hidden" if has_creds or not lib_ready else "",
             ok_hidden     = "hidden" if not has_creds or not lib_ready else "",
             install_btn   = install_btn,
             install_log   = install_log,
+            **t_ui
         )
         body = html.encode("utf-8")
         self.send_response(200)
@@ -244,7 +279,7 @@ class _Handler(BaseHTTPRequestHandler):
             ip = params.get("ip", [""])[0].strip()
             if not ip:
                 self._json({"status": "error",
-                            "message": "L'IP du Roomba n'est pas renseignée dans Domoticz."})
+                            "message": _("ui_err_ip_missing_api")})
                 return
             # NOUVEAU : validation de l'adresse IP
             try:
@@ -291,7 +326,7 @@ class _Handler(BaseHTTPRequestHandler):
         try:
             from lib_manager import ensure_all
         except ImportError as e:
-            msg = f"Erreur import lib_manager : {e}"
+            msg = _("ui_err_import", e=e)
             with self._lock:
                 self._state["install_log"].append(msg)
             if self._cb_install:

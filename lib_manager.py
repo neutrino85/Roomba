@@ -1,3 +1,4 @@
+from i18n import _, set_language
 """
 lib_manager.py — Gestion automatique de la bibliothèque roomba (neutrino85/Roomba980-Python).
 """
