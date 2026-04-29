@@ -36,7 +36,7 @@ This is a Domoticz plugin that allows you to control your local iRobot Roomba (m
 ```bash
 # 1. Clone the plugin
 cd ~/.domoticz/plugins
-git clone https://github.com/ton-compte/roomba-domoticz.git Roomba
+git clone https://github.com/neutrino85/Roomba.git Roomba
 cd Roomba
 
 # 2. Restart Domoticz
@@ -132,7 +132,7 @@ Reboot  → Restart Roomba
 ```bash
 # 1. Copier le plugin
 cd ~/.domoticz/plugins
-git clone https://github.com/ton-compte/roomba-domoticz.git Roomba
+git clone https://github.com/neutrino85/Roomba.git Roomba
 cd Roomba
 
 # 2. Redémarrer Domoticz
